@@ -1,0 +1,152 @@
+var VK_SHIFT 	= 0x10;
+var VK_CONTROL 	= 0x11;
+var VK_MENU 	= 0x12;
+
+function doBeforeMouseEvent(macro) 
+{
+	var vCommand = "";
+	if (macro.alt) vCommand  += "Shell.KeyboardEvent(" + VK_MENU + ", 0, 0, 0);\r\n";
+	if (macro.ctrl) vCommand  += "Shell.KeyboardEvent(" + VK_CONTROL + ", 0, 0, 0);\r\n";
+	if (macro.shift) vCommand  += "Shell.KeyboardEvent(" + VK_SHIFT + ", 0, 0, 0);\r\n";
+	return vCommand; 
+}
+
+function doAfterMouseEvent(macro)
+{
+	var vCommand = "";
+	if (macro.shift) vCommand  += "\r\nShell.KeyboardEvent(" + VK_SHIFT + ", 0, " + eKeyboardEventFlagKeyUp + ", 0);";
+	if (macro.ctrl) vCommand  += "\r\nShell.KeyboardEvent(" + VK_CONTROL + ", 0, " + eKeyboardEventFlagKeyUp + ", 0);";
+	if (macro.alt) vCommand  += "\r\nShell.KeyboardEvent(" + VK_MENU + ", 0, " + eKeyboardEventFlagKeyUp + ", 0);";
+	if ( macro.sleep > 0 ) vCommand += "\r\nSleep("+ macro.sleep + ");";
+	return vCommand; 
+}
+
+function collectSearchFlags(macro)
+{
+	var dwFlags = 0;
+			
+	if ( macro.match_case ) 	dwFlags += eFindMatchCase;
+	if ( macro.whole_word ) 	dwFlags += eFindWholeWord;
+	if ( macro.regexp )	   		dwFlags += eFindRegexp;
+	if ( macro.up )	  	   		dwFlags += eFindDirectionUp;
+	if ( macro.check_hidden ) 	dwFlags += eFindHiddenText;
+	if ( macro.wrap ) 	   		dwFlags += eFindWrap;
+	if ( macro.hex ) 	   		dwFlags += eFindHex;
+	if ( macro.extend_sel ) 	dwFlags += eFindExtendSel;
+	if ( macro.close_on_end ) 	dwFlags += eFindCloseOnFound; 
+	if ( macro.mark ) 	   		dwFlags += eFindHighlight;
+	if ( macro.bookmark ) 		dwFlags += eFindBookmark;
+	return dwFlags;
+}
+
+function onMacroStepTranslate()
+{
+	var vCommand;
+	switch (this.name)
+	{
+		case "MouseMove":
+			vCommand += doBeforeMouseEvent(this);
+			vCommand  = "Shell.MouseEvent(eMouseEventMove, 0, new Point(" + this.x + "," + this.y + "));";
+			vCommand += doAfterMouseEvent(this);
+			break;
+		case "LeftMouseDown":
+			vCommand += doBeforeMouseEvent(this);
+			vCommand  = "Shell.MouseEvent(eMouseEventLeftDown, 0, new Point(" + this.x + "," + this.y + "));";
+			vCommand += doAfterMouseEvent(this);
+			break;
+		case "LeftMouseUp":
+			vCommand += doBeforeMouseEvent(this);
+			vCommand  = "Shell.MouseEvent(eMouseEventLeftUp, 0, new Point(" + this.x + "," + this.y + "));";
+			vCommand += doAfterMouseEvent(this);
+			break;
+		case "LeftMouseClick":
+			vCommand += doBeforeMouseEvent(this);
+			vCommand  = "Shell.MouseEvent(eMouseEventLeftDown, 0, new Point(" + this.x + "," + this.y + "));";
+			vCommand  = "Shell.MouseEvent(eMouseEventLeftUp, 0, new Point(" + this.x + "," + this.y + "));";
+			vCommand += doAfterMouseEvent(this);
+			break;
+		case "RightMouseDown":
+			vCommand += doBeforeMouseEvent(this);
+			vCommand  = "Shell.MouseEvent(eMouseEventRightDown, 0, new Point(" + this.x + "," + this.y + "));";
+			vCommand += doAfterMouseEvent(this);
+			break;
+		case "RightMouseUp":
+			vCommand += doBeforeMouseEvent(this);
+			vCommand  = "Shell.MouseEvent(eMouseEventRightUp, 0, new Point(" + this.x + "," + this.y + "));";
+			vCommand += doAfterMouseEvent(this);
+			break;
+		case "MiddleMouseDown":
+			vCommand += doBeforeMouseEvent(this);
+			vCommand  = "Shell.MouseEvent(eMouseEventMiddleDown, 0, new Point(" + this.x + "," + this.y + "));";
+			vCommand += doAfterMouseEvent(this);
+			break;
+		case "MiddleMouseUp":
+			vCommand += doBeforeMouseEvent(this);
+			vCommand  = "Shell.MouseEvent(eMouseEventMiddleUp, 0, new Point(" + this.x + "," + this.y + "));";
+			vCommand += doAfterMouseEvent(this);
+			break;
+		case "LeftMouseDblClk":
+			vCommand += doBeforeMouseEvent(this);
+			vCommand  = "Shell.MouseEvent(eMouseEventMiddleDown, 0, new Point(" + this.x + "," + this.y + "));";
+			vCommand  = "Shell.MouseEvent(eMouseEventMiddleUp, 0, new Point(" + this.x + "," + this.y + "));";
+			vCommand += doAfterMouseEvent(this);
+			break;
+		case "MouseWheel":
+			vCommand += doBeforeMouseEvent(this);
+			vCommand  = "Shell.MouseEvent(eMouseEventWhell, " + this.delta + ", null);";
+			vCommand += doAfterMouseEvent(this);
+			break;
+		case "MouseWheelEx":
+			vCommand  = "Shell.MouseEvent(eMouseEventWhell, " + this.delta + ", null);";
+			break;
+		case "Message":
+			vCommand  = "Shell.SendMessage(0, " + this.msg + ", " + this.high + ", " + this.low + ");";
+			break;
+		case "Command": 
+			vCommand  = "ExecuteCommand(\"" + this.cmd + "\", " + this.count + ");";
+			break;
+		case "Tool": 
+			var sCommand = this.command;
+			if ( sCommand.search(" ") != -1) sCommand =  " '" + sCommand + "'"; 			
+			if ( this.arguments != "" ) sCommand += this.arguments;  
+			vCommand = "CaptureOutput('" + sCommand + "', '" + this.initial_dir + "', '" + this.exit_cmd + "', " + this.encoding + ");";
+			break;
+		case "Help":
+			var sPath = this.path;
+			if ( sPath.search(" ") != -1) sPath =  " '" + sPath + "'"; 			
+			if ( this.arguments != "" ) sPath += this.arguments;   
+			vCommand  = "OpenURL('" + sPath + "');";
+			break;
+		case "Sleep":
+			vCommand  = "Sleep(" + this.msec + ");";
+			break;
+		case "GoTo":
+			vCommand = "if ( ActiveView != null ) ActiveView.GoTo(\"" + this.pos + "\", " + this.anchor + ");";
+			break;
+		case "Text":
+			vCommand = "if ( ActiveDocument != null ) ActiveView.Position = ActiveDocument.InsertText(ActiveView.Position, \"" + this.text + "\", eActionTyping);";
+			break;
+		case "NewLine":
+			var sNewLines = ""; 
+			for (i = 0; i < this.count; i++) sNewLines += "\\r\\n";
+			vCommand = "if ( ActiveDocument != null ) ActiveView.Position = ActiveDocument.InsertText(ActiveView.Position, \"" + sNewLines + "\", eActionTyping);";
+			break;
+		case "Find":
+			var dwFlags = collectSearchFlags(this);			
+			vCommand = "FindEx(\"" + this.what + "\", " + this.type + ", " + this.action + ", " + this.search_in + ", " + this.result + ", " + dwFlags + ");";
+			break;
+		case "Replace":
+			var dwFlags = collectSearchFlags(this);
+			vCommand = "ReplaceEx(\"" + this.what + "\", \"" + this.to + "\", " + this.type + ", " + this.action + ", " + this.search_in + ", " + this.result + ", " + dwFlags + ");";  
+			break;
+		default:			
+			vCommand = this.name;
+			break;
+	}
+	return vCommand;
+}
+
+// add optional script information, nice when you want to see something meaningful 
+// in plugin description in options dialog
+Application.AddScriptInfo("2D52EEB6-1B78-4167-92EB-885F93F11112", "Macro Conversion", "1.0.0.3", "The script does translation of recorded macro steps into HippoEDIT JavaScript", "HippoEDIT", "supportbox@hippoedit.com", "http://wiki.hippoedit.com/plugins/macro_conversion");
+Application.RegisterMacroTranslator("Macros.JSConvert", "Convert to JavaScript...", "Convert active macro to JavaScript file", -1, onMacroStepTranslate); 
